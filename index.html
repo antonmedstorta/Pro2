@@ -208,11 +208,6 @@
                     .attr("style", "font-family: Avenir Next; font-size:30px; text-decoration:underline;")
 
                 legend.append('text')
-                    .attr("transform", "translate(" + (xPos+580) + "," + (yPos-20) + ")")
-                    .text(function() {return ("Top answers in other random countries:")})
-                    .attr("style", "font-family: Avenir Next; font-size:10px; text-decoration:underline;")
-
-                legend.append('text')
                     .attr("transform", "translate(" + (xPos+20) + "," + (yPos+10) + ")")
                     .text(function() {return (_.startCase(csvData[i].Alternative) + ": " + csvData[i][chosenCountry])})
                     .attr("style", function() {
@@ -278,7 +273,6 @@
 
         g.selectAll("#" + country.id).style("fill", "url(#grad)")
 
-        otherCountries(xPos, yPos, legend, chosenCountry, noOfAlternatives, question)
         otherQuestions(chosenCountry, noOfAlternatives)
 
         }
@@ -388,39 +382,6 @@
             })
 
         }
-    }
-
-    function otherCountries(xPos, yPos, legend, chosenCountry, noOfAlternatives, question) {
-        xPos = 640
-        yPos = 90
-        randomCountryArray = [] 
-
-        for (var i = 0; i < 10; i++) {
-
-            d3.csv(year + "/" + question, function(csvData) {
-                randomNumber = Math.floor(Math.random()*30 + 1)
-                randomCountry = Object.keys(csvData[0])[randomNumber]
-                var found = randomCountryArray.includes(randomCountry)
-                
-                while (found == true) {
-                    randomNumber = Math.floor(Math.random()*30 + 1)
-                    randomCountry = Object.keys(csvData[0])[randomNumber]
-                    var found = randomCountryArray.includes(randomCountry)
-                }
-
-                randomCountryArray.push(randomCountry)
-
-                var majorityAnswer = checkMajorityAnswer(csvData, noOfAlternatives, randomCountry)
-
-                legend.append('text')
-                    .attr("transform", "translate(" + (xPos) + "," + (yPos) + ")")
-                    .attr("style", "font-family: Avenir Next; font-size:13px;")
-                    .text(function() {return (randomCountry + " - " + majorityAnswer)})
-                yPos += 20
-
-                }) //NUMBER OF QUESTIONS
-            };
-
     }
 
     function readAndApplyData(chosenCountry, id) {
