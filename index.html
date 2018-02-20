@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <script src="https://code.jquery.com/jquery-2.0.0.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+
+  </head>
+  <body>
+    <div id="title" style="text-align:center;">
+        <h2>Information Visualisation 2018 - Project 2</h2>
+        <div id="titleQ">Currently visualising: </div>
+
+        <select id="subject" onchange="readAndApplyData(chosenCountry)">
+            <option value="Science_and_technology_are_making_our_lives_healthier_easier_and_more_comfortable.csv">Science and Technology are making our lives healthier, easier and more comfortable</option>
+            <option value="Future_changes_More_emphasis_on_development_of_technology.csv">Future changes: More emphasis on development of technology</option>
+            <option value="Important_in_life_Religion.csv">Importance of Religion in life</option>
+            <option value="How_often_do_you_pray.csv">How often do you pray</option>
+            <option value="How_often_do_you_use_a_computer.csv">How often do you use a computer</option>
+            <option value="It_is_not_important_for_me_to_know_about_science_in_my_daily_life.csv">It is not important for me to know about science in my daily life</option>
+            <option value="A_Religious_Person.csv">Do you consider yourself a religious person?</option>
+            <option value="Whenever_science_and_religion_conflict_religion_is_always_right.csv">Whenever science and religion conflict, religion is always right</option>
+            <option value="Information_source_mobile_phone_internet.csv">Information Source: Mobile Phone or Internet</option>
+        </select>
+    </br></br>
+        <button class="btn btn-primary" id="2010" onclick="changeyear(this.id)"><i class='fas fa-info'></i></i> 2010 - 2014</button>
+        <button class="btn btn-primary" id="2005" onclick="changeyear(this.id)"><i class='fas fa-chart-bar'></i> 2005 - 2010</button>
+        <button class="btn btn-primary" id="2000" onclick="changeyear(this.id)"><i class='fas fa-info'></i></i> 2000 - 2005</button>
+        <button class="btn btn-primary" id="1995" onclick="changeyear(this.id)"><i class='fas fa-chart-bar'></i> 1995 - 2000</button>
+        <button class="btn btn-primary" id="1990" onclick="changeyear(this.id)"><i class='fas fa-chart-bar'></i> 1990 - 1995</button>
+
+    </div>
+
+    <div id="map"></div>
+    <!-- <div id="tooltip" style="z-index: 10; visibility: hidden;">A simple tooltip</div> -->
+
+    <svg width="1600" height="200" id="otherQ" style="display:block;"></svg>
+
+    <script src="lodash.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
+    <script type="text/javascript" src="colorbrewer_schemes.js"></script>
+    <script src="https://d3js.org/topojson.v1.min.js"></script>
+
+    <script>
+
+    document.getElementById("2010").style.backgroundColor = "#1cd760";
+
+    var chosenCountry = ""
+    var randomCountry = ""
+    var countryClicked = false
+    var majorityAnswerPercent = ""
+    var question = ""
+    var year = 2010
+
+    function changeyear(newYear) {
+        var buttons = (document.getElementsByClassName("btn btn-primary"));
+        for (i = 0; i < buttons.length; i++) { 
+            buttons[i].style.backgroundColor = "#007bff";
+        }
+        document.getElementById(newYear).style.backgroundColor = "#1cd760";
+        year = newYear
+        readAndApplyData(chosenCountry)
+        $("#otherQ").empty();
+
+    }
+
+    function checkList(value, array) {
+        for (var i = 0; i < array.length; i++) {
+            if (array[i] == value) {
+            return true;
+            }
+        }
+        return false;
+        }
+
+    var countryList = ["SWE", "ARM", "CHL", "USA", "GHA", "CHN", "EGY", "HKG", "HTI", "JPN", "AUS", "BRA", "KOR", "ARG", "NZL", "PER", "PHL", "PAK", "POL", "THA", "COL", "ECU", "DEU", "IND", "NLD", "QAT", "SGP", "LBY", "ZAF", "TUR", "UKR"];
+
+    var flagList = ["SE", "AM", "CL", "US", "GH", "CN", "EG", "HK", "HT", "JP", "AU", "BR", "KR", "AR", "NZ", "PE", "PH", "PK", "PL", "TH", "CO", "EC", "DE", "ID", "NL", "QA", "SG", "LY", "ZA", "TR", "UA"]
+
+    var gradColors = ["DarkMagenta"]
+
+    var tooltip = d3.select("body")
+        .append("div")
+        .attr("id", "tooltip")
+        .style("position", "absolute")
+        .style("z-index", "10")
+        .style("visibility", "hidden")
+        .text("a simple tooltip");
+
+    var m_width = $("#map").width(),
+        width = 938,
+        height = 320,
+        country,
+        state;
+
+    var projection = d3.geoMercator()
+        .scale(100)
+        .translate([width / 2, height / 1.6]);
+
+    var path = d3.geoPath()
+        .projection(projection);
+
+    var svg = d3.select("#map").append("svg") //Skapa SVG som hamnar i map-div
+        .attr("preserveAspectRatio", "xMidYMid")
+        .attr("viewBox", "0 0 " + width + " " + height)
+        .attr("width", m_width)
+        .attr("height", m_width * height / width);
+
+    var g = svg.append("g"); //Lägg till en div kallad g till SVG
+
+    d3.json("countries.topo.json", function(error, d) {
+        g.append("g") //Lägg till en div g som innehåller alla länder
+            .attr("id", "countries")
+            .selectAll("path")
+            .data(topojson.feature(d, d.objects.countries).features) 
+            .enter()
+            .append("path")
+            .attr("id", function(d) { return d.id; })
+            .attr("style", function(d) {
+                if (checkList(d.id, countryList)) {
+                    return "fill:grey"
+                }
+              else {
+                    return "fill:black; opacity:0.1"
+              }})
+            .attr("d", path) //Path är datan om hur landet ska ritas upp
+            .on("click", country_clicked)
+
+    });
+
+    function applyGrad(csvData, noOfAlternatives, chosenCountry, question, id) {
+
+        console.log(csvData)
+        console.log("CHOSENCOUNTRY I APPLYGRAD: " + chosenCountry)
+
+        var grad = svg.append("defs")
+            .append("linearGradient")
+            .attr("id", "grad")
+            .attr("x1", "0%")
+            .attr("x2", "0%")
+            .attr("y1", "100%")
+            .attr("y2", "0%")
+
+        var legend = d3.select('svg')
+
+        console.log(csvData[0][chosenCountry])
+
+        if (countryClicked == false) {
+            console.log("No country clicked. No gradient or legend applied.")
+        }
+
+        else if (csvData[0][chosenCountry] == undefined) {
+            alert("WOOPS!\nSeems like no data was recorded for this country during those years. \nClick OK to go back to the world map.");
+            if (countryClicked == true) {
+                countryClicked = false
+
+                svg.select("#" + id).style("fill", "grey")
+                svg.selectAll("path").style("display", "block")
+                var xyz = [width / 2, height / 1.5, 1];
+                country = null;
+                zoom(xyz);
+            }
+        }
+        
+        else {
+
+        var total = countTotalQs(csvData, noOfAlternatives, chosenCountry)
+        var majorityAnswer = checkMajorityAnswer(csvData, noOfAlternatives, chosenCountry) 
+
+        totalPercentFilled = 0
+        counter = 0
+
+        var w = 12, h = 12;
+
+        //FÖLJANDE KOD SKAPAR GRADIENTEN ÖVER SVAREN (FUNKAR EJ ÄN). 
+
+        var randomColor = gradColors[Math.floor(Math.random() * gradColors.length)]
+
+        for (var i = 0; i < noOfAlternatives; i++) {
+            if (i == 0) {
+                
+                var yPos = 80
+                var xPos = 60
+                var opacity = 1/noOfAlternatives+0.7
+                var increaseFactor = opacity/noOfAlternatives
+
+                grad.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", randomColor)
+                    .attr("stop-opacity", opacity)
+
+                legend.append("rect")
+                    .attr("id", "rect" + counter)
+                    .attr("width", w)
+                    .attr("height", h)
+                    .attr("style", function() {
+                        return "fill:" + randomColor + "; fill-opacity:" + opacity + "; stroke-width: " + 0.5 + "; stroke: black" 
+                    })
+                    .attr("transform", "translate(" + xPos + "," + yPos + ")");
+
+                legend.append('text')
+                    .attr("transform", "translate(" + (xPos+2) + "," + (yPos-20) + ")")
+                    .text(function() {return (chosenCountry)})
+                    .attr("style", "font-family: Avenir Next; font-size:30px; text-decoration:underline;")
+
+                legend.append('text')
+                    .attr("transform", "translate(" + (xPos+580) + "," + (yPos-20) + ")")
+                    .text(function() {return ("Top answers in other random countries:")})
+                    .attr("style", "font-family: Avenir Next; font-size:10px; text-decoration:underline;")
+
+                legend.append('text')
+                    .attr("transform", "translate(" + (xPos+20) + "," + (yPos+10) + ")")
+                    .text(function() {return (_.startCase(csvData[i].Alternative) + ": " + csvData[i][chosenCountry])})
+                    .attr("style", function() {
+                        if (majorityAnswerPercent == csvData[i][chosenCountry]) {
+                            return "font-family: Avenir Next; font-size:10px; font-weight: bold;"
+                        }
+                        else {
+                            return "font-family: Avenir Next; font-size:8px;"
+                        }
+                    });
+
+                var prevOpacity = opacity
+                counter += 1
+
+            }
+        
+            else {
+
+                var yPos = yPos + 20
+
+                opacity -= increaseFactor
+                
+                grad.append("stop")
+                    .attr("offset", totalPercentFilled)
+                    .attr("stop-color", randomColor)
+                    .attr("stop-opacity", opacity)
+
+                legend.append("rect")
+                    .attr("id", "rect" + counter)
+                    .attr("width", w)
+                    .attr("height", h)
+                    .attr("style", function() {
+                        return "fill:" + randomColor + "; fill-opacity:" + opacity + "; stroke-width: " + 0.5 + "; stroke: black" 
+                    })
+                    .attr("transform", "translate(" + xPos + "," + yPos + ")");
+
+                legend.append('text')
+                    .attr("transform", "translate(" + (xPos+20) + "," + (yPos+10) + ")")
+                    .text(function() {return (_.startCase(csvData[i].Alternative) + ": " + csvData[i][chosenCountry])})
+                    .attr("style", function() {
+                        if (majorityAnswerPercent == csvData[i][chosenCountry]) {
+                            return "font-family: Avenir Next; font-size:10px; font-weight: bold;"
+                        }
+                        else {
+                            return "font-family: Avenir Next; font-size:8px;"
+                        }
+                    });
+
+                var prevOpacity = opacity
+
+                counter += 1
+            }
+
+            grad.append("stop")
+                .attr("offset", (totalPercentFilled + (parseFloat(csvData[i][chosenCountry])/parseFloat(total))))
+                .attr("stop-color", randomColor)
+                .attr("stop-opacity", prevOpacity);
+
+            totalPercentFilled += (parseFloat(csvData[i][chosenCountry])/parseFloat(total))
+
+
+        }
+
+        g.selectAll("#" + country.id).style("fill", "url(#grad)")
+
+        otherCountries(xPos, yPos, legend, chosenCountry, noOfAlternatives, question)
+        otherQuestions(chosenCountry, noOfAlternatives)
+
+        }
+
+    }
+
+    function otherQuestions(chosenCountry, noOfAlternatives) {
+
+        var svg_width = $("#map").width()
+        var width = svg_width/7
+        var height = 100
+        var radius = 100
+        var counter = 0
+
+        for (var i = 0; i < 9; i++) {
+
+            question = document.getElementById("subject").options[i].value;
+
+            d3.csv(year + "/" + question, function(csvData) {
+                var noOfAlternatives = parseInt(csvData.length) //NUMBER OF QUESTIONS
+
+                for (var i = 0; i < noOfAlternatives; i++) {
+                    var stringTest = csvData[i][chosenCountry]
+                    if (stringTest.includes(",")) {
+                        var chars = csvData[i][chosenCountry].split('');
+                        var answer = "";
+                        for (var j = 0; j < chars.length; j++) {
+                            if (Number.isInteger(parseInt(chars[j]))) {
+                                answer += (chars[j])
+                            }
+                            else {
+                                answer += "."
+                                }
+                        }
+
+                        csvData[i][chosenCountry] = parseFloat(answer)
+                    }
+                    else {
+                        console.log("No commas, no changes.")
+                    }
+                }
+
+            counter += 1
+
+            var data = []
+            for (var j = 0; j < noOfAlternatives; j++) {
+                data.push(csvData[j][chosenCountry])
+            }
+
+            var finalOpacity = 0
+
+
+            var pieSegments = d3.pie()(data);
+            
+            var arcGenerator = d3.arc()
+                         .innerRadius(0)
+                         .outerRadius(45)
+                         .startAngle(function (d) { return d.startAngle; })
+                         .endAngle(function (d) { return d.endAngle; });
+            
+            var colors = d3.scaleOrdinal(d3.schemeCategory10);
+
+            var Q = d3.select('#otherQ')
+                .append('g')
+                .attr("id", function() {
+                    return document.getElementById("subject").options[counter-1].value;
+                })
+                .attr('transform', 'translate(' + width + ',' + height + ')')
+                .on("mouseover", function(){
+                    var tipString = this.id.split("_").join(" ");
+                    tipstring = tipString.replace(".csv", "")
+                    document.getElementById("tooltip").innerHTML = tipstring
+                    return tooltip.style("visibility", "visible");})
+                .on("mousemove", function(){return tooltip.style("top", (event.pageY+60)+"px").style("left",(event.pageX-80)+"px");})
+                .on("mouseout", function(){return tooltip.style("visibility", "hidden");})
+                .on("click", function() {
+                    document.getElementById("subject").value = this.id
+                    readAndApplyData2(chosenCountry, this.id)
+                });
+        
+            Q.selectAll('path')
+                .data(pieSegments)
+                .enter()
+                .append('path')
+                .attrs({ d: arcGenerator,
+                    fill: function (d, i) { 
+                        return "DarkBlue"; },
+                    opacity: function(d, i) {
+
+                        var startOpacity = (((1/noOfAlternatives)+0.6))
+
+                        var decreaseFactor = (((1/noOfAlternatives)+0.6)/noOfAlternatives)
+
+                        if (finalOpacity == 0) {
+                            finalOpacity = startOpacity
+                        }
+                        else {
+                            finalOpacity -= decreaseFactor
+                        }
+
+                        return (finalOpacity)
+                    }        
+            })
+
+            width += 150
+
+            })
+
+        }
+    }
+
+    function otherCountries(xPos, yPos, legend, chosenCountry, noOfAlternatives, question) {
+        xPos = 640
+        yPos = 90
+        randomCountryArray = [] 
+
+        for (var i = 0; i < 10; i++) {
+
+            d3.csv(year + "/" + question, function(csvData) {
+                randomNumber = Math.floor(Math.random()*30 + 1)
+                randomCountry = Object.keys(csvData[0])[randomNumber]
+                var found = randomCountryArray.includes(randomCountry)
+                
+                while (found == true) {
+                    randomNumber = Math.floor(Math.random()*30 + 1)
+                    randomCountry = Object.keys(csvData[0])[randomNumber]
+                    var found = randomCountryArray.includes(randomCountry)
+                }
+
+                randomCountryArray.push(randomCountry)
+
+                var majorityAnswer = checkMajorityAnswer(csvData, noOfAlternatives, randomCountry)
+
+                legend.append('text')
+                    .attr("transform", "translate(" + (xPos) + "," + (yPos) + ")")
+                    .attr("style", "font-family: Avenir Next; font-size:13px;")
+                    .text(function() {return (randomCountry + " - " + majorityAnswer)})
+                yPos += 20
+
+                }) //NUMBER OF QUESTIONS
+            };
+
+    }
+
+    function readAndApplyData(chosenCountry, id) {
+        $("#otherQ").empty();
+        svg.selectAll("defs").remove()
+        svg.selectAll("rect").remove()
+        svg.selectAll("text").remove()
+
+        var e = document.getElementById("subject");
+        var question = e.options[e.selectedIndex].value;
+            d3.csv(year + "/" + question, function(csvData) {
+                try {
+                var noOfAlternatives = parseInt(csvData.length) //NUMBER OF QUESTIONS
+
+                //Calculate and apply gradient that is proportional to data from survey
+                applyGrad(csvData, noOfAlternatives, chosenCountry, question, id)
+                }
+        catch(error) {
+            alert("No data recorded for this question during this time period")
+        }
+    })
+    }
+
+    function readAndApplyData2(chosenCountry, question) {
+        $("#otherQ").empty();
+        svg.selectAll("defs").remove()
+        svg.selectAll("rect").remove()
+        svg.selectAll("text").remove()
+
+        d3.csv(year + "/" + question, function(csvData) {
+            var noOfAlternatives = parseInt(csvData.length) //NUMBER OF QUESTIONS
+            //Calculate and apply gradient that is proportional to data from survey
+            applyGrad(csvData, noOfAlternatives, chosenCountry, question)
+        })
+    }
+
+    function checkMajorityAnswer(csvData, noOfAlternatives, chosenCountry) {
+
+        for (var i = 0; i < noOfAlternatives; i++) {
+            var stringTest = csvData[i][chosenCountry]
+            if (stringTest.includes(",")) {
+                var chars = csvData[i][chosenCountry].split('');
+                var answer = "";
+                for (var j = 0; j < chars.length; j++) {
+                    if (Number.isInteger(parseInt(chars[j]))) {
+                        answer += (chars[j])
+                    }
+                    else {
+                        answer += "."
+                        }
+                }
+
+                csvData[i][chosenCountry] = parseFloat(answer)
+            }
+            else {
+                console.log("No commas, no changes.")
+            }
+        }
+
+        majorityAnswerPercent = csvData[0][chosenCountry]
+        for (var i = 0; i < noOfAlternatives; i++) {
+            if (parseFloat(csvData[i][chosenCountry]) > parseFloat(majorityAnswerPercent)) {
+                // console.log("Alternativ: " + csvData[i].Alternative + " - Land: " + csvData[i][chosenCountry])
+                majorityAnswerPercent = csvData[i][chosenCountry]
+                var majorityAnswer = csvData[i].Alternative
+            }
+        }
+
+        majorityAnswerFinal = majorityAnswer + ": " + majorityAnswerPercent
+        return majorityAnswerFinal;
+
+    }
+
+
+    function countTotalQs(csvData, noOfAlternatives, chosenCountry) {
+        var total = 0
+        for (var i = 0; i < noOfAlternatives; i++) {
+            total += parseFloat(csvData[i][chosenCountry])
+        }
+        return total
+    }
+
+
+    function zoom(xyz) {
+
+        xyz[0] = xyz[0] + 4
+        xyz[1] = xyz[1] - 2
+
+        g.transition()
+            .duration(300)
+            .attr("transform", "translate(" + projection.translate() + ")scale(" + xyz[2] + ")translate(-" + xyz[0] + ",-" + xyz[1] + ")")
+            .selectAll("#countries")
+            .style("stroke-width", 1.0 / xyz[2] + "px")
+            .attr("d", path.pointRadius(20.0 / xyz[2]));
+
+        }
+
+    function get_xyz(d) { //Get xyz on the map for each countries
+        var bounds = path.bounds(d); //Bounds is a function in the path tag
+        var w_scale = (bounds[1][0] - bounds[0][0]) / width;
+        var h_scale = (bounds[1][1] - bounds[0][1]) / height;
+        var z = .96 / Math.max(w_scale*2, h_scale*1.1);
+        var x = (bounds[1][0] + bounds[0][0]) / 2;
+        var y = (bounds[1][1] + bounds[0][1]) / 2 + (height / z / 6);
+        return [x, y, z];
+    }
+
+    function country_clicked(d) {
+
+        if (countryClicked == false) { //Om vi inte klickat på ett land än och vill zooma in på ett
+            countryClicked = true
+
+          if (country) {
+            g.selectAll("#" + country.id).style('display', null);
+          }
+          if (d && country !== d) {
+            var xyz = get_xyz(d);
+            country = d;
+            if (checkList(d.id, countryList)) {
+                chosenCountry = d.properties.name
+                console.log(chosenCountry)
+                readAndApplyData(chosenCountry, d.id)
+
+                svg.selectAll("path").style("display", "none")
+                svg.selectAll("#" + d.id).style("display", "block")
+                document.getElementById("otherQ").style.display = "block"
+                svg.selectAll("defs").remove()
+
+                zoom(xyz);
+                }
+            else {
+                console.log("Can't zoom on a greyed out country")
+                countryClicked = false
+                country = null;
+            }
+
+            }
+          }
+
+        else { //Om vi redan har clickat på ett land och vill tillbaka till världskartan
+            if (checkList(d.id, countryList)) {
+                g.selectAll("#" + country.id).style("fill", "grey")
+                svg.selectAll("path").style("display", "block")
+                document.getElementById("otherQ").style.display = "none"
+                $("#otherQ").empty();
+
+            }
+            svg.selectAll("rect").remove()
+            svg.selectAll("text").remove()
+
+            countryClicked = false
+            var xyz = [width / 2, height / 1.5, 1];
+            country = null;
+            zoom(xyz);
+        }
+
+        }
+
+    $(window).resize(function() {
+      var w = $("#map").width();
+      svg.attr("width", w);
+      svg.attr("height", w * height / width);
+    });
+    </script>
+  </body>
+</html>
