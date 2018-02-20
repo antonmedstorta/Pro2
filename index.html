@@ -78,9 +78,6 @@
         }
 
     var countryList = ["SWE", "ARM", "CHL", "USA", "GHA", "CHN", "EGY", "HKG", "HTI", "JPN", "AUS", "BRA", "KOR", "ARG", "NZL", "PER", "PHL", "PAK", "POL", "THA", "COL", "ECU", "DEU", "IND", "NLD", "QAT", "SGP", "LBY", "ZAF", "TUR", "UKR"];
-
-    var flagList = ["SE", "AM", "CL", "US", "GH", "CN", "EG", "HK", "HT", "JP", "AU", "BR", "KR", "AR", "NZ", "PE", "PH", "PK", "PL", "TH", "CO", "EC", "DE", "ID", "NL", "QA", "SG", "LY", "ZA", "TR", "UA"]
-
     var gradColors = ["DarkMagenta"]
 
     var tooltip = d3.select("body")
@@ -154,7 +151,7 @@
         }
 
         else if (csvData[0][chosenCountry] == undefined) {
-            alert("WOOPS!\nSeems like no data was recorded for this country during those years. \nClick OK to go back to the world map.");
+            alert("WOOPS!\nSeems like no data was recorded for this country during those years.");
             if (countryClicked == true) {
                 countryClicked = false
 
